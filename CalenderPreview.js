@@ -10,3 +10,5 @@ const CalendarPreview = () => {
       {}
     </div>
   );
+};
+export default CalendarPreview;
