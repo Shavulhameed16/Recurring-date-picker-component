@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Recurring Date Picker</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.7; }
+    }
+    .animate-pulse {
+      animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+    }
+    
+    .animate-fade-in {
+      animation: fadeIn 0.5s ease-out forwards;
+    }
+    
+    .calendar-day {
+      width: 30px;
+      height: 30px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 2px;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+    .calendar-day:hover {
+      transform: scale(1.1);
+    }
+    .calendar-day.selected {
+      background-color: #3b82f6;
+      color: white;
+    }
+    .calendar-day {
+      transition: all 0.2s ease;
+    }
+    .calendar-day.occurrence {
+      background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+      color: white;
+      box-shadow: 0 2px 5px rgba(59, 130, 246, 0.3);
+      transform: scale(1.05);
+      z-index: 1;
+      position: relative;
+    }
+    .calendar-day.occurrence:hover {
+      transform: scale(1.1) !important;
+      box-shadow: 0 4px 8px rgba(59, 130, 246, 0.4);
+    }
+  </style>
+</head>
+<body class="bg-gray-50 min-h-screen p-8">
+  <div class="max-w-4xl mx-auto bg-white rounded-xl shadow-xl overflow-hidden p-6 transition-all duration-300 hover:shadow-2xl">
+    <h1 class="text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent mb-6 animate-pulse">✨ Recurring Date Picker ✨</h1>
+    
+    <!-- Recurrence Options -->
+    <div class="mb-8">
+      <h2 class="text-lg font-semibold text-gray-700 mb-4">Recurrence Pattern</h2>
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <!-- Daily -->
+        <div class="recurrence-option p-4 border-2 rounded-xl cursor-pointer bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200 hover:border-blue-400 transition-all duration-200 hover:scale-[1.02] shadow-sm" data-type="daily">
+          <h3 class="font-medium text-blue-700 group-hover:text-blue-800">Daily</h3>
+          <p class="text-sm text-blue-500">Every day</p>
+          <div class="h-1 mt-2 bg-blue-200 rounded-full w-0 group-hover:w-full transition-all duration-300"></div>
+        </div>
+        
+        <!-- Weekly -->
+        <div class="recurrence-option p-4 border-2 rounded-xl cursor-pointer bg-gradient-to-br from-indigo-50 to-purple-50 border-indigo-200 hover:border-indigo-400 transition-all duration-200 hover:scale-[1.02] shadow-sm group" data-type="weekly">
+          <h3 class="font-medium text-indigo-700 group-hover:text-indigo-800">Weekly</h3>
+          <p class="text-sm text-indigo-500">On selected days</p>
+          <div class="h-1 mt-2 bg-indigo-200 rounded-full w-0 group-hover:w-full transition-all duration-300"></div>
+        </div>
+        
+        <!-- Monthly -->
+        <div class="recurrence-option p-4 border-2 rounded-xl cursor-pointer bg-gradient-to-br from-green-50 to-teal-50 border-green-200 hover:border-green-400 transition-all duration-200 hover:scale-[1.02] shadow-sm group" data-type="monthly">
+          <h3 class="font-medium text-green-700 group-hover:text-green-800">Monthly</h3>
+          <p class="text-sm text-green-500">Day of month</p>
+          <div class="h-1 mt-2 bg-green-200 rounded-full w-0 group-hover:w-full transition-all duration-300"></div>
+        </div>
+        
+        <!-- Yearly -->
+        <div class="recurrence-option p-4 border-2 rounded-xl cursor-pointer bg-gradient-to-br from-yellow-50 to-orange-50 border-yellow-200 hover:border-yellow-400 transition-all duration-200 hover:scale-[1.02] shadow-sm group" data-type="yearly">
+          <h3 class="font-medium text-yellow-700 group-hover:text-yellow-800">Yearly</h3>
+          <p class="text-sm text-yellow-500">Same date each year</p>
+          <div class="h-1 mt-2 bg-yellow-200 rounded-full w-0 group-hover:w-full transition-all duration-300"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Customization Options (Dynamic Content) -->
+    <div id="customization-section" class="mb-8 p-6 border-2 border-blue-100 rounded-xl bg-gradient-to-b from-white to-blue-50 transition-all duration-500">
+      <div id="daily-options" class="options-panel">
+        <div class="mb-4">
+          <label class="block text-gray-700 mb-2">Repeat every</label>
+          <div class="flex items-center">
+            <input type="number" min="1" value="1" class="w-16 border rounded px-3 py-2 mr-2">
+            <span>day(s)</span>
+          </div>
+        </div>
+      </div>
+
+      <div id="weekly-options" class="options-panel hidden">
+        <div class="mb-4">
+          <label class="block text-gray-700 mb-2">Repeat every</label>
+          <div class="flex items-center mb-4">
+            <input type="number" min="1" value="1" class="w-16 border rounded px-3 py-2 mr-2">
+            <span>week(s) on:</span>
+          </div>
+          <div class="flex flex-wrap gap-2">
+            <div class="day-option px-4 py-2 border rounded-lg cursor-pointer hover:bg-blue-50 transition-colors duration-150 active:scale-95 transform">Sunday</div>
+            <div class="day-option px-4 py-2 border rounded cursor-pointer">Monday</div>
+            <div class="day-option px-4 py-2 border rounded cursor-pointer bg-blue-100 border-blue-300">Tuesday</div>
+            <div class="day-option px-4 py-2 border rounded cursor-pointer">Wednesday</div>
+            <div class="day-option px-4 py-2 border rounded cursor-pointer">Thursday</div>
+            <div class="day-option px-4 py-2 border rounded cursor-pointer">Friday</div>
+            <div class="day-option px-4 py-2 border rounded cursor-pointer">Saturday</div>
+          </div>
+        </div>
+      </div>
+
+      <div id="monthly-options" class="options-panel hidden">
+        <div class="mb-4">
+          <label class="block text-gray-700 mb-2">Repeat every</label>
+          <div class="flex items-center mb-4">
+            <input type="number" min="1" value="1" class="w-16 border rounded px-3 py-2 mr-2">
+            <span>month(s) on:</span>
+          </div>
+          
+          <div class="flex gap-6">
+            <div class="flex-1">
+              <div class="flex items-center mb-2">
+                <input type="radio" id="day-of-month" name="monthly-type" checked class="mr-2">
+                <label for="day-of-month">Day</label>
+              </div>
+              <div class="flex items-center">
+                <input type="number" min="1" max="31" value="15" class="w-16 border rounded px-3 py-2">
+              </div>
+            </div>
+            
+            <div class="flex-1">
+              <div class="flex items-center mb-2">
+                <input type="radio" id="pattern-month" name="monthly-type" class="mr-2">
+                <label for="pattern-month">Pattern</label>
+              </div>
+              <div class="flex items-center gap-2">
+                <select class="border rounded px-2 py-2">
+                  <option>First</option>
+                  <option>Second</option>
+                  <option>Third</option>
+                  <option>Fourth</option>
+                  <option>Last</option>
+                </select>
+                <select class="border rounded px-2 py-2">
+                  <option>Sunday</option>
+                  <option>Monday</option>
+                  <option>Tuesday</option>
+                  <option>Wednesday</option>
+                  <option>Thursday</option>
+                  <option>Friday</option>
+                  <option>Saturday</option>
+                </select>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div id="yearly-options" class="options-panel hidden">
+        <div class="mb-4">
+          <label class="block text-gray-700 mb-2">Repeat every</label>
+          <div class="flex items-center mb-4">
+            <input type="number" min="1" value="1" class="w-16 border rounded px-3 py-2 mr-2">
+            <span>year(s) on:</span>
+          </div>
+          <div class="flex gap-4 items-center">
+            <input type="date" class="border rounded px-3 py-2">
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Date Range Selection -->
+    <div class="mb-8">
+      <h2 class="text-lg font-semibold text-gray-700 mb-4">Date Range</h2>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <label class="block text-gray-700 mb-2 transition-all duration-200 hover:text-blue-600">Start Date</label>
+          <input type="date" id="start-date" class="w-full border-2 rounded-lg px-3 py-2 focus:border-blue-400 focus:ring-2 focus:ring-blue-200 transition-all duration-200">
+        </div>
+        <div>
+          <label class="block text-gray-700 mb-2">End Date (optional)</label>
+          <div class="flex items-center">
+            <input type="date" id="end-date" class="w-full border rounded px-3 py-2 mr-2">
+            <span class="text-sm text-gray-500">or</span>
+            <button id="no-end-date" class="ml-2 px-3 py-1 text-sm text-gray-600 hover:text-gray-800">No end date</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Preview Calendar -->
+    <div>
+      <h2 class="text-lg font-semibold text-gray-700 mb-4">Preview</h2>
+      <div id="calendar-preview" class="border rounded-lg p-4">
+        <div class="flex justify-between items-center mb-4">
+          <button id="prev-month" class="px-4 py-2 bg-blue-100 rounded-full hover:bg-blue-200 transition-colors duration-200 active:animate-pulse">&lt;</button>
+          <h3 id="month-year-display" class="font-medium text-lg text-gray-700 animate-[fadeIn_0.5s_ease-in-out]">July 2023</h3>
+          <button id="next-month" class="px-4 py-2 bg-blue-100 rounded-full hover:bg-blue-200 transition-colors duration-200 active:animate-pulse">&gt;</button>
+        </div>
+        
+        <div class="grid grid-cols-7 gap-1 mb-2">
+          <div class="text-center text-xs font-medium text-gray-500">Sun</div>
+          <div class="text-center text-xs font-medium text-gray-500">Mon</div>
+          <div class="text-center text-xs font-medium text-gray-500">Tue</div>
+          <div class="text-center text-xs font-medium text-gray-500">Wed</div>
+          <div class="text-center text-xs font-medium text-gray-500">Thu</div>
+          <div class="text-center text-xs font-medium text-gray-500">Fri</div>
+          <div class="text-center text-xs font-medium text-gray-500">Sat</div>
+        </div>
+        
+        <div id="calendar-days" class="grid grid-cols-7 gap-1">
+          <!-- Days will be populated by JavaScript -->
+        </div>
+      </div>
+    </div>
+
+    <!-- Generated Dates -->
+    <div class="mt-8">
+      <h2 class="text-lg font-semibold text-gray-700 mb-4">Selected Dates</h2>
+      <div id="selected-dates" class="border rounded-lg p-4 h-40 overflow-y-auto">
+        <p class="text-gray-500">Select options above to see recurring dates</p>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      // Initialize with daily option selected
+      const recurrenceOptions = document.querySelectorAll('.recurrence-option');
+      const optionPanels = document.querySelectorAll('.options-panel');
+      const dayOptions = document.querySelectorAll('.day-option');
+      const prevMonthBtn = document.getElementById('prev-month');
+      const nextMonthBtn = document.getElementById('next-month');
+      const monthYearDisplay = document.getElementById('month-year-display');
+      const calendarDays = document.getElementById('calendar-days');
+      const selectedDatesEl = document.getElementById('selected-dates');
+      const noEndDateBtn = document.getElementById('no-end-date');
+      const endDateInput = document.getElementById('end-date');
+      
+      let currentDate = new Date();
+      let selectedRecurrenceType = 'daily';
+      let selectedDays = ['Tuesday'];
+
+      // Set default start date to today
+      const today = new Date();
+      document.getElementById('start-date').valueAsDate = today;
+
+      // Define months for display
+      const months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 
+                     'August', 'September', 'October', 'November', 'December'];
+
+      // Recurrence option selection
+      recurrenceOptions.forEach(option => {
+        option.addEventListener('click', function() {
+          // Remove active class from all options
+          recurrenceOptions.forEach(opt => {
+            opt.classList.remove('bg-blue-50', 'border-blue-200');
+            opt.querySelector('h3').classList.remove('text-blue-800');
+            opt.querySelector('p').classList.remove('text-blue-600');
+          });
+          
+          // Add active class to selected option
+          this.classList.add('bg-blue-50', 'border-blue-200');
+          this.querySelector('h3').classList.add('text-blue-800');
+          this.querySelector('p').classList.add('text-blue-600');
+          
+          // Update selected recurrence type
+          selectedRecurrenceType = this.dataset.type;
+          
+          // Show the corresponding options panel
+          optionPanels.forEach(panel => panel.classList.add('hidden'));
+          document.getElementById(`${selectedRecurrenceType}-options`).classList.remove('hidden');
+          
+          // Regenerate calendar and dates
+          generateCalendar();
+          generateSelectedDates();
+        });
+      });
+
+      // Day selection for weekly option
+      dayOptions.forEach(day => {
+        day.addEventListener('click', function() {
+          const dayName = this.textContent;
+          
+          if (selectedDays.includes(dayName)) {
+            this.classList.remove('bg-blue-100', 'border-blue-300');
+            selectedDays = selectedDays.filter(d => d !== dayName);
+          } else {
+            this.classList.add('bg-blue-100', 'border-blue-300');
+            selectedDays.push(dayName);
+          }
+          
+          generateSelectedDates();
+        });
+      });
+
+      // No end date button
+      noEndDateBtn.addEventListener('click', function() {
+        endDateInput.value = '';
+      });
+
+      // Generate calendar for current month
+      function generateCalendar() {
+        // Get first day of month and how many days
+        const firstDay = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
+        const lastDay = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0);
+        const daysInMonth = lastDay.getDate();
+        
+        // Update month/year display
+        monthYearDisplay.textContent = `${months[currentDate.getMonth()]} ${currentDate.getFullYear()}`;
+        
+        // Clear calendar
+        calendarDays.innerHTML = '';
+        
+        // Add empty cells for days before first day
+        for (let i = 0; i < firstDay.getDay(); i++) {
+          const emptyDay = document.createElement('div');
+          emptyDay.className = 'calendar-day';
+          calendarDays.appendChild(emptyDay);
+        }
+        
+        // Add days of month
+        for (let day = 1; day <= daysInMonth; day++) {
+          const dayElement = document.createElement('div');
+          dayElement.className = 'calendar-day';
+          dayElement.textContent = day;
+          
+          // Check if this day should be marked as an occurrence
+          const checkDate = new Date(currentDate.getFullYear(), currentDate.getMonth(), day);
+          if (isOccurrence(checkDate)) {
+            dayElement.classList.add('occurrence');
+          }
+          
+          calendarDays.appendChild(dayElement);
+        }
+      }
+      
+      // Check if a date matches the recurrence pattern
+      function isOccurrence(date) {
+        const startDate = document.getElementById('start-date').valueAsDate;
+        if (!startDate) return false;
+        
+        if (date < startDate) return false;
+        
+        const endDate = document.getElementById('end-date').valueAsDate;
+        if (endDate && date > endDate) return false;
+        
+        if (selectedRecurrenceType === 'daily') {
+          return true;
+        }
+        else if (selectedRecurrenceType === 'weekly') {
+          const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+          const dayName = days[date.getDay()];
+          return selectedDays.includes(dayName);
+        }
+        else if (selectedRecurrenceType === 'monthly') {
+          const typeSelection = document.querySelector('input[name="monthly-type"]:checked').id;
+          
+          if (typeSelection === 'day-of-month') {
+            const dayOfMonth = parseInt(document.querySelector('#monthly-options input[type="number"]').value);
+            return date.getDate() === dayOfMonth;
+          } else {
+            // Implement pattern matching (e.g., second Tuesday)
+            // This is simplified - would need more complex logic for actual implementation
+            return date.getDay() === 2 && date.getDate() > 7 && date.getDate() <= 14; // Example: second Tuesday
+          }
+        }
+        else if (selectedRecurrenceType === 'yearly') {
+          const yearlyDate = document.querySelector('#yearly-options input[type="date"]').valueAsDate;
+          if (!yearlyDate) return false;
+          
+          return date.getMonth() === yearlyDate.getMonth() && date.getDate() === yearlyDate.getDate();
+        }
+        
+        return false;
+      }
+      
+      // Generate list of selected dates
+      function generateSelectedDates() {
+        selectedDatesEl.innerHTML = '';
+        
+        const startDate = document.getElementById('start-date').valueAsDate;
+        if (!startDate) {
+          selectedDatesEl.innerHTML = '<p class="text-gray-500">Please select a start date</p>';
+          return;
+        }
+        
+        const endDate = document.getElementById('end-date').valueAsDate || 
+                        new Date(startDate.getFullYear() + 1, startDate.getMonth(), startDate.getDate());
+        
+        let occurrences = [];
+        let currentDate = new Date(startDate);
+        
+        while (currentDate <= endDate) {
+          if (isOccurrence(currentDate)) {
+            occurrences.push(new Date(currentDate));
+          }
+          
+          // Move to next day
+          currentDate.setDate(currentDate.getDate() + 1);
+        }
+        
+        if (occurrences.length === 0) {
+          selectedDatesEl.innerHTML = '<p class="text-gray-500">No dates match your selected pattern</p>';
+          return;
+        }
+        
+        // Display first 20 occurrences (could be paginated in a real implementation)
+        occurrences.slice(0, 20).forEach(date => {
+          const dateEl = document.createElement('div');
+          dateEl.className = 'py-1 border-b';
+          dateEl.textContent = date.toDateString();
+          selectedDatesEl.appendChild(dateEl);
+        });
+        
+        if (occurrences.length > 20) {
+          const moreEl = document.createElement('div');
+          moreEl.className = 'py-1 text-gray-500';
+          moreEl.textContent = `+ ${occurrences.length - 20} more dates...`;
+          selectedDatesEl.appendChild(moreEl);
+        }
+      }
+      
+      // Month navigation
+      prevMonthBtn.addEventListener('click', function() {
+        currentDate.setMonth(currentDate.getMonth() - 1);
+        generateCalendar();
+      });
+      
+      nextMonthBtn.addEventListener('click', function() {
+        currentDate.setMonth(currentDate.getMonth() + 1);
+        generateCalendar();
+      });
+      
+      // Date range input changes
+      document.getElementById('start-date').addEventListener('change', generateSelectedDates);
+      document.getElementById('end-date').addEventListener('change', generateSelectedDates);
+      
+      // Initialize UI
+      document.querySelector('.recurrence-option[data-type="daily"]').click();
+      generateCalendar();
+    });
+  </script>
+</body>
+</html>
